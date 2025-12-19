@@ -34,8 +34,8 @@ The application uses **Axios** for API communication and **Tailwind CSS** for st
 ### Clone the repository
 
 ```bash
-git clone <your-repo-url>
-cd <your-project-folder>
+git clone git@github.com:Boladek/smartdeals-event-app.git
+cd events-app
 ```
 
 ### Install dependencies
