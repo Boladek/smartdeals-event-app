@@ -13,7 +13,7 @@ export function UpcomingEventCard({ event, link = "/dashboard/details" }) {
             className="relative col-span-1 h-56 sm:h-64 overflow-hidden rounded-[24px] bg-slate-900 shadow-md"
             onClick={() => {
                 // TODO: handle navigation or show details
-                console.log("Clicked event:", event.id);
+                // console.log("Clicked event:", event.id);
                 navigate(link, {
                     state: { event },
                 });

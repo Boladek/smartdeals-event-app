@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useForm, Controller, FormProvider } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import EventName from "./EventName";
 import EventDate from "./EventDate";
 import EventAddress from "./EventAddress";
@@ -14,9 +14,8 @@ import { useNavigate } from "react-router";
 function CreateEventPage() {
     const navigate = useNavigate();
     const { mutateAsync, isPending } = useCreateEvent();
-    const [currentStep, setCurrentStep] = useState(1); // Start from step 1
+    const [currentStep, setCurrentStep] = useState(5); // Start from step 1
 
-    // react-hook-form setup
     const {
         control,
         handleSubmit,
@@ -47,7 +46,7 @@ function CreateEventPage() {
     const onSubmit = async (data) => {
         try {
             if (currentStep === 6) {
-                const res = await mutateAsync({
+                await mutateAsync({
                     venue: data.venue,
                     state: data.state,
                     country: data.country,
@@ -168,7 +167,9 @@ function CreateEventPage() {
             <BackButton onClick={handleBack} />
             <h1 className="text-3xl font-bold mb-6">{getStepTitle()}</h1>
             <form
-                onSubmit={handleSubmit(onSubmit)}
+                onSubmit={(e) => {
+                    e.preventDefault(); // always block native submit
+                }}
                 className="space-y-6 max-w-xl"
             >
                 {renderStepContent()}
@@ -185,7 +186,7 @@ function CreateEventPage() {
                                     Back
                                 </button>
                             )}
-                            {currentStep !== 6 ? (
+                            {currentStep < 6 ? (
                                 <button
                                     type="button"
                                     onClick={nextStep}
@@ -195,8 +196,9 @@ function CreateEventPage() {
                                 </button>
                             ) : (
                                 <button
-                                    type="submit"
+                                    type="button"
                                     disabled={isPending}
+                                    onClick={handleSubmit(onSubmit)}
                                     className="px-4 py-2 bg-red-600 text-white rounded-md"
                                 >
                                     {isPending

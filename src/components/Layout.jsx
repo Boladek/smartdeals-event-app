@@ -2,36 +2,37 @@ import { UseAuth } from "../contexts/AuthContext";
 import { LoginForm } from "./LoginForm";
 import { useLocation, useNavigate } from "react-router";
 import {
-    FaPlusCircle,
-    FaCalendarAlt,
-    FaEdit,
+    FaCalendarAlt, // All Events
+    FaClipboardList, // My Events
+    FaPlusCircle, // Create Event
     FaSignOutAlt,
 } from "react-icons/fa";
+import { useEffect } from "react";
+import logo from "../assets/smartdeals.svg";
 
 /**
  * 🔗 Central nav config (single source of truth)
  */
 const NAV_LINKS = [
     {
+        label: "All Events",
+        shortLabel: "Events",
+        path: "/dashboard",
+        icon: FaCalendarAlt,
+    },
+    {
+        label: "My Events",
+        shortLabel: "My",
+        path: "/my-events",
+        icon: FaClipboardList,
+    },
+    {
         label: "Create Event",
         shortLabel: "Create",
         path: "/create-event",
         icon: FaPlusCircle,
     },
-    {
-        label: "My Events",
-        shortLabel: "My Events",
-        path: "/my-events",
-        icon: FaCalendarAlt,
-    },
-    // {
-    //     label: "Edit Event",
-    //     shortLabel: "Edit",
-    //     path: "/edit-event",
-    //     icon: FaEdit,
-    // },
 ];
-
 export const Layout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -44,8 +45,6 @@ export const Layout = ({ children }) => {
         user,
         logout,
     } = UseAuth();
-
-    console.log(user)
 
     const isActive = (path) => location.pathname === path;
 
@@ -61,17 +60,22 @@ export const Layout = ({ children }) => {
             active ? "text-primary" : "text-gray-600 hover:text-primary",
         ].join(" ");
 
+    useEffect(() => {
+        if (location.pathname === "/") {
+            navigate("/dashboard");
+        }
+    }, [location]);
+
     return (
         <div className="h-screen flex flex-col">
             {/* ================= HEADER NAVBAR ================= */}
             <header className="w-full px-4 md:px-6 py-3 flex justify-between items-center border-b border-[#00000012] bg-white sticky top-0 z-40">
-                {/* Logo */}
-                <h1
+                <img
+                    src={logo}
+                    className="h-8"
+                    alt="Smart Deals logo"
                     onClick={() => navigate("/dashboard")}
-                    className="font-bold text-xl text-red-600 cursor-pointer"
-                >
-                    SMARTDEALS
-                </h1>
+                />
 
                 {/* Desktop Navigation */}
                 {isLoggedIn && user.accountType === "event" && (
