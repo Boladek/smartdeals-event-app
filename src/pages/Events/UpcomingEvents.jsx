@@ -1,18 +1,22 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
-import { useGetAllEvents } from "../../hooks/EventsHooks";
+import { useSearchParams } from "react-router";
+import { useGetAllEvents, useGetFilteredEvents } from "../../hooks/EventsHooks";
 import { UpcomingEventCard, UpcomingEventSkeleton } from "./UpcomingEventCard";
-import { SideDrawer } from "../../components/SideDrawer";
-import { formatEventDate } from "../../helpers/functions";
+import { EventActions } from "../../components/EventActions";
+import { FaFilter, FaRedoAlt, FaRegCalendarTimes } from "react-icons/fa";
+
+const DEFAULT_EXTRA_PARAMS = {
+    action: "search",
+    keyword: "all",
+};
 
 export default function UpcomingEvents() {
-    const navigate = useNavigate();
     const [open, setOpen] = useState(false);
+    const [extraParams, setExtraparams] = useState(DEFAULT_EXTRA_PARAMS);
 
     // ✅ URL params
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Read from URL, with safe defaults
     const page = useMemo(() => {
         const raw = searchParams.get("page");
         const n = raw ? Number(raw) : 0;
@@ -24,9 +28,11 @@ export default function UpcomingEvents() {
         return d === "previous" ? "previous" : "next";
     }, [searchParams]);
 
-    // ✅ your existing hook now receives page/direction from URL
     const { data: allEvents = [], isLoading: gettingAllEvents } =
         useGetAllEvents({ page, direction });
+
+    const { data: filters = [], isLoading: gettingAllFilters } =
+        useGetFilteredEvents({ page, direction, ...extraParams });
 
     const updateParams = (nextPage, nextDir) => {
         setSearchParams((prev) => {
@@ -38,53 +44,106 @@ export default function UpcomingEvents() {
     };
 
     const handleNextPage = () => {
-        if (allEvents.hasNextPage) {
-            updateParams(allEvents.pageForward, "next");
+        if (filters?.hasNextPage) {
+            updateParams(filters.pageForward, "next");
         }
     };
 
     const handlePreviousPage = () => {
-        if (allEvents.hasPreviousPage) {
-            updateParams(allEvents.pageBack, "previous");
+        if (filters?.hasPreviousPage) {
+            updateParams(filters.pageBack, "previous");
         }
     };
 
+    // ✅ refresh/reset
+    const handleRefresh = () => {
+        setExtraparams(DEFAULT_EXTRA_PARAMS);
+        updateParams(0, "next");
+    };
+
+    const isLoading = gettingAllEvents || gettingAllFilters;
+    const events = filters?.data ?? [];
+    const hasEvents = events.length > 0;
+
     return (
         <div className="space-y-4">
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between">
                 <h2 className="text-[14px] font-semibold text-gray-800">
-                    Upcoming Events
+                    Events
                 </h2>
+
                 <button
-                    className="text-[#FA6400] text-[12px] cursor-pointer"
-                    onClick={() => setOpen(true)}
+                    type="button"
+                    onClick={() => setOpen((prev) => !prev)}
+                    className="flex items-center justify-center h-9 w-9 rounded-full border border-gray-300 hover:bg-gray-100 text-gray-600"
+                    title="Filter"
                 >
-                    See all
+                    <FaFilter className="text-xs" />
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                {gettingAllEvents
-                    ? Array.from({ length: 4 }).map((_, idx) => (
-                          <UpcomingEventSkeleton key={idx} />
-                      ))
-                    : allEvents.data?.map((event) => (
-                          <UpcomingEventCard
-                              event={event}
-                              key={event.id}
-                              link={`/dashboard/details?from=${encodeURIComponent(
-                                  `/dashboard/upcoming-events?page=${page}&dir=${direction}`
-                              )}`}
-                          />
-                      ))}
-            </div>
+            {/* ✅ Grid / Skeleton / Empty state */}
+            {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+                    {Array.from({ length: 8 }).map((_, idx) => (
+                        <UpcomingEventSkeleton key={idx} />
+                    ))}
+                </div>
+            ) : hasEvents ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+                    {events.map((event) => (
+                        <UpcomingEventCard
+                            event={event}
+                            key={event.id}
+                            link={`/dashboard/${event.eventId}/${event.eventClass}`}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                        <FaRegCalendarTimes
+                            className="text-primary"
+                            size={22}
+                        />
+                    </div>
 
-            {allEvents.data?.length > 0 && (
+                    <h3 className="mt-4 text-sm sm:text-base font-semibold text-gray-900">
+                        No events found
+                    </h3>
+
+                    <p className="mt-1 text-xs sm:text-sm text-gray-600">
+                        Try changing your filters or refresh to see all events.
+                    </p>
+
+                    <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center">
+                        <button
+                            type="button"
+                            onClick={() => setOpen(true)}
+                            className="w-full sm:w-auto px-5 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                            Adjust Filters
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleRefresh}
+                            className="w-full sm:w-auto px-5 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 inline-flex items-center justify-center gap-2"
+                        >
+                            <FaRedoAlt />
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ✅ Pagination */}
+            {hasEvents && (
                 <div className="flex justify-between mt-4 pb-4">
                     <button
                         className="text-sm text-primary hover:bg-gray-100 py-2 px-6 rounded-lg focus:outline-primary/90 focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed outline-2 outline-primary"
                         onClick={handlePreviousPage}
-                        disabled={!allEvents.hasPreviousPage}
+                        disabled={!filters?.hasPreviousPage}
                     >
                         Previous
                     </button>
@@ -92,7 +151,7 @@ export default function UpcomingEvents() {
                     <button
                         className="text-sm text-white bg-primary hover:bg-primary/80 py-2 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleNextPage}
-                        disabled={!allEvents.hasNextPage}
+                        disabled={!filters?.hasNextPage}
                     >
                         Next
                     </button>
@@ -100,385 +159,15 @@ export default function UpcomingEvents() {
             )}
 
             {open && (
-                <SideDrawer
+                <EventActions
                     handleClose={() => setOpen(false)}
-                    title="Upcoming Events"
-                    width={500}
-                >
-                    <div className="space-y-3">
-                        {gettingAllEvents ? (
-                            Array.from({ length: 6 }).map((_, idx) => (
-                                <div
-                                    key={idx}
-                                    className="w-full h-20 rounded-lg bg-gray-100 animate-pulse"
-                                />
-                            ))
-                        ) : allEvents.data?.length === 0 ? (
-                            <p className="text-sm text-gray-500">
-                                No events found.
-                            </p>
-                        ) : (
-                            allEvents.data.map((event) => (
-                                <EventListItem
-                                    key={event.id}
-                                    event={event}
-                                    onClick={() => {
-                                        const from = `/dashboard/upcoming-events?page=${page}&dir=${direction}`;
-                                        navigate(
-                                            `/dashboard/details?from=${encodeURIComponent(
-                                                from
-                                            )}`,
-                                            {
-                                                state: { event },
-                                            }
-                                        );
-                                    }}
-                                />
-                            ))
-                        )}
-                    </div>
-                </SideDrawer>
+                    clearAction={() => setExtraparams(DEFAULT_EXTRA_PARAMS)}
+                    handleAction={(arg) => {
+                        setExtraparams(arg);
+                        updateParams(0, "next"); // ✅ reset pagination when applying new filter
+                    }}
+                />
             )}
         </div>
     );
 }
-
-// import { useState } from "react";
-// import { useNavigate } from "react-router";
-// import { useGetAllEvents } from "../../hooks/EventsHooks";
-// import { UpcomingEventCard, UpcomingEventSkeleton } from "./UpcomingEventCard";
-// import { SideDrawer } from "../../components/SideDrawer";
-// import { formatEventDate } from "../../helpers/functions";
-
-// function UpcomingEvents() {
-//     const navigate = useNavigate();
-//     const [open, setOpen] = useState(false);
-//     const [page, setPage] = useState(0); // Initial page state
-//     const [direction, setDirection] = useState("next");
-
-//     const { data: allEvents = [], isLoading: gettingAllEvents } =
-//         useGetAllEvents({ page, direction }); // Fetch events with pagination
-
-//     const handleNextPage = () => {
-//         if (allEvents.hasNextPage) {
-//             setPage(allEvents.pageForward); // Move to the next page
-//             setDirection("next");
-//         }
-//     };
-
-//     const handlePreviousPage = () => {
-//         if (allEvents.hasPreviousPage) {
-//             setPage(allEvents.pageBack); // Move to the previous page
-//             setDirection("previous");
-//         }
-//     };
-
-//     return (
-//         <div className="space-y-4">
-//             <div className="flex justify-between">
-//                 <h2 className="text-[14px] font-semibold text-gray-800">
-//                     Upcoming Events
-//                 </h2>
-//                 <button
-//                     className="text-[#FA6400] text-[12px] cursor-pointer"
-//                     onClick={() => setOpen(true)}
-//                 >
-//                     See all
-//                 </button>
-//             </div>
-
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-//                 {gettingAllEvents
-//                     ? Array.from({ length: 4 }).map((_, idx) => (
-//                           <UpcomingEventSkeleton key={idx} />
-//                       ))
-//                     : allEvents.data?.map((event) => (
-//                           <UpcomingEventCard
-//                               event={event}
-//                               key={event.id}
-//                               link="/dashboard/details"
-//                           />
-//                       ))}
-//             </div>
-
-//             {allEvents.data?.length > 0 && (
-//                 <div className="flex justify-between mt-4 pb-4">
-//                     <button
-//                         className="text-sm text-primary hover:bg-gray-100 py-2 px-6 rounded-lg focus:outline-primary/90 focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed outline-2 outline-primary"
-//                         onClick={handlePreviousPage}
-//                         disabled={!allEvents.hasPreviousPage}
-//                     >
-//                         Previous
-//                     </button>
-//                     <button
-//                         className="text-sm text-white bg-primary hover:bg-primary/80 py-2 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
-//                         onClick={handleNextPage}
-//                         disabled={!allEvents.hasNextPage}
-//                     >
-//                         Next
-//                     </button>
-//                 </div>
-//             )}
-
-//             {open && (
-//                 <SideDrawer
-//                     handleClose={() => setOpen(false)}
-//                     title="Upcoming Events"
-//                     width={500}
-//                 >
-//                     <div className="space-y-3">
-//                         {gettingAllEvents ? (
-//                             Array.from({ length: 6 }).map((_, idx) => (
-//                                 <div
-//                                     key={idx}
-//                                     className="w-full h-20 rounded-lg bg-gray-100 animate-pulse"
-//                                 />
-//                             ))
-//                         ) : allEvents.data?.length === 0 ? (
-//                             <p className="text-sm text-gray-500">
-//                                 No events found.
-//                             </p>
-//                         ) : (
-//                             allEvents.data.map((event) => (
-//                                 <EventListItem
-//                                     key={event.id}
-//                                     event={event}
-//                                     onClick={() => {
-//                                         // TODO: handle navigation or show details
-//                                         console.log("Clicked event:", event.id);
-//                                         navigate(`/dashboard/details`, {
-//                                             state: { event },
-//                                         });
-//                                     }}
-//                                 />
-//                             ))
-//                         )}
-//                     </div>
-//                 </SideDrawer>
-//             )}
-//         </div>
-//     );
-// }
-
-const EventListItem = ({ event, onClick }) => {
-    const image = event?.image1 || "/images/event-placeholder.jpg";
-    const date = formatEventDate(event?.eventDate);
-
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="w-full flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#E41F26] hover:bg-red-50/40 transition-colors text-left"
-        >
-            {/* Thumbnail */}
-            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-200">
-                <img
-                    src={image}
-                    alt={event?.eventName}
-                    className="h-full w-full object-cover"
-                />
-            </div>
-
-            {/* Details */}
-            <div className="flex-1 space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
-                        {event?.eventName}
-                    </h3>
-                    {event?.eventType && (
-                        <span className="inline-flex items-center rounded-full bg-[#E41F260A] px-2 py-[2px] text-[10px] font-semibold text-[#E41F26] border border-[#E41F26]/30 whitespace-nowrap">
-                            {event.eventType}
-                        </span>
-                    )}
-                </div>
-
-                {event?.slogan && (
-                    <p className="text-[11px] text-gray-500 line-clamp-1">
-                        {event.slogan}
-                    </p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
-                    {date && (
-                        <span className="inline-flex items-center gap-1">
-                            <span className="h-1 w-1 rounded-full bg-gray-400" />
-                            {date}
-                        </span>
-                    )}
-                    {(event?.venue || event?.country) && (
-                        <span className="inline-flex items-center gap-1">
-                            <span className="h-1 w-1 rounded-full bg-gray-400" />
-                            {event?.venue || "Venue"}, {event?.country || ""}
-                        </span>
-                    )}
-                    {event?.eventCategory && (
-                        <span className="inline-flex items-center gap-1">
-                            <span className="h-1 w-1 rounded-full bg-gray-400" />
-                            {event.eventCategory}
-                        </span>
-                    )}
-                </div>
-            </div>
-        </button>
-    );
-};
-
-// export default UpcomingEvents;
-
-// // import { useState } from "react";
-// // import { useGetAllEvents } from "../../hooks/EventsHooks";
-// // import { UpcomingEventCard, UpcomingEventSkeleton } from "./UpcomingEventCard";
-// // import { SideDrawer } from "../../components/SideDrawer";
-// // import { formatEventDate } from "../../helpers/functions";
-// // import { useNavigate } from "react-router";
-
-// // function UpcomingEvents() {
-// //     const navigate = useNavigate();
-// //     const [open, setOpen] = useState(false);
-// //     const [page, setPage] = useState(0); // Initial page state
-
-// //     const { data: allEvents = [], isLoading: gettingAllEvents } =
-// //         useGetAllEvents({ page, direction: "" }); // Fetch events with pagination
-
-// //     const handleNextPage = () => {
-// //         if (allEvents.hasNextPage) {
-// //             setPage(page + 1); // Move to the next page
-// //         }
-// //     };
-
-// //     const handlePreviousPage = () => {
-// //         if (allEvents.hasPreviousPage) {
-// //             setPage(page - 1); // Move to the previous page
-// //         }
-// //     };
-
-// //     return (
-// //         <div className="space-y-4">
-// //             <div className="flex justify-between">
-// //                 <h2 className="text-[14px] font-semibold text-gray-800">
-// //                     Upcoming Event
-// //                 </h2>
-// //                 <button
-// //                     className="text-[#FA6400] text-[12px] cursor-pointer"
-// //                     onClick={() => setOpen(true)}
-// //                 >
-// //                     See all
-// //                 </button>
-// //             </div>
-
-// //             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-// //                 {gettingAllEvents
-// //                     ? Array.from({ length: 4 }).map((_, idx) => (
-// //                           <UpcomingEventSkeleton key={idx} />
-// //                       ))
-// //                     : allEvents.data
-// //                           .slice(0, 4)
-// //                           .map((event) => (
-// //                               <UpcomingEventCard event={event} key={event.id} />
-// //                           ))}
-// //             </div>
-
-// //             {open && (
-// //                 <SideDrawer
-// //                     handleClose={() => setOpen(false)}
-// //                     title="Upcoming Events"
-// //                     width={500}
-// //                 >
-// //                     <div className="space-y-3">
-// //                         {gettingAllEvents ? (
-// //                             Array.from({ length: 6 }).map((_, idx) => (
-// //                                 <div
-// //                                     key={idx}
-// //                                     className="w-full h-20 rounded-lg bg-gray-100 animate-pulse"
-// //                                 />
-// //                             ))
-// //                         ) : allEvents.data.length === 0 ? (
-// //                             <p className="text-sm text-gray-500">
-// //                                 No events found.
-// //                             </p>
-// //                         ) : (
-// //                             allEvents.data.map((event) => (
-// //                                 <EventListItem
-// //                                     key={event.id}
-// //                                     event={event}
-// //                                     onClick={() => {
-// //                                         // TODO: handle navigation or show details
-// //                                         console.log("Clicked event:", event.id);
-// //                                         navigate(`/dashboard/details`, {
-// //                                             state: { event },
-// //                                         });
-// //                                     }}
-// //                                 />
-// //                             ))
-// //                         )}
-// //                     </div>
-// //                 </SideDrawer>
-// //             )}
-// //         </div>
-// //     );
-// // }
-
-// // const EventListItem = ({ event, onClick }) => {
-// //     const image = event?.image1 || "/images/event-placeholder.jpg";
-// //     const date = formatEventDate(event?.eventDate);
-
-// //     return (
-// //         <button
-// //             type="button"
-// //             onClick={onClick}
-// //             className="w-full flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#E41F26] hover:bg-red-50/40 transition-colors text-left"
-// //         >
-// //             {/* Thumbnail */}
-// //             <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-200">
-// //                 <img
-// //                     src={image}
-// //                     alt={event?.eventName}
-// //                     className="h-full w-full object-cover"
-// //                 />
-// //             </div>
-
-// //             {/* Details */}
-// //             <div className="flex-1 space-y-1">
-// //                 <div className="flex items-center justify-between gap-2">
-// //                     <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
-// //                         {event?.eventName}
-// //                     </h3>
-// //                     {event?.eventType && (
-// //                         <span className="inline-flex items-center rounded-full bg-[#E41F260A] px-2 py-[2px] text-[10px] font-semibold text-[#E41F26] border border-[#E41F26]/30 whitespace-nowrap">
-// //                             {event.eventType}
-// //                         </span>
-// //                     )}
-// //                 </div>
-
-// //                 {event?.slogan && (
-// //                     <p className="text-[11px] text-gray-500 line-clamp-1">
-// //                         {event.slogan}
-// //                     </p>
-// //                 )}
-
-// //                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
-// //                     {date && (
-// //                         <span className="inline-flex items-center gap-1">
-// //                             <span className="h-1 w-1 rounded-full bg-gray-400" />
-// //                             {date}
-// //                         </span>
-// //                     )}
-// //                     {(event?.venue || event?.country) && (
-// //                         <span className="inline-flex items-center gap-1">
-// //                             <span className="h-1 w-1 rounded-full bg-gray-400" />
-// //                             {event?.venue || "Venue"}, {event?.country || ""}
-// //                         </span>
-// //                     )}
-// //                     {event?.eventCategory && (
-// //                         <span className="inline-flex items-center gap-1">
-// //                             <span className="h-1 w-1 rounded-full bg-gray-400" />
-// //                             {event.eventCategory}
-// //                         </span>
-// //                     )}
-// //                 </div>
-// //             </div>
-// //         </button>
-// //     );
-// // };
-
-// // export default UpcomingEvents;

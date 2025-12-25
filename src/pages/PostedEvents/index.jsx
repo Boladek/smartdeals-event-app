@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useGetAllMyEvents } from "../../hooks/UserEventHooks";
+import { useMemo, useState, useEffect } from "react";
+import { useGetMyEvents } from "../../hooks/UserEventHooks";
 import {
     UpcomingEventCard,
     UpcomingEventSkeleton,
@@ -23,7 +23,6 @@ const matchesSearch = (event, term) => {
         event.address,
         event.state,
         event.country,
-        // add more fields if your "my events" has them
     ]
         .map(normalize)
         .join(" ");
@@ -48,29 +47,49 @@ const useDebounce = (value, delay = 350) => {
     return debounced;
 };
 
-export default function MyEventsPage() {
+function PostedEventsPage() {
     const [selectedTab, setSelectedTab] = useState("All");
     const [search, setSearch] = useState("");
 
     const debouncedSearch = useDebounce(search, 350);
 
-    const { data, isLoading } = useGetAllMyEvents();
+    const [page, setPage] = useState(0);
+    const [direction, setDirection] = useState("next");
 
-    // ✅ Normalize hook response shape (adjust if yours differs)
-    // If your hook returns an array directly, change to: const list = data ?? [];
-    const list = data?.data ?? data ?? [];
+    const { data: allEvents = {}, isLoading: gettingAllEvents } =
+        useGetMyEvents({
+            page,
+            direction,
+        });
 
-    // Reset UI state when filters change (optional, but consistent with PostedEvents)
+    // Reset pagination when filters change (good UX)
     useEffect(() => {
-        // no pagination here, but keeping the same UX pattern (can remove if you want)
+        setPage(0);
+        setDirection("next");
     }, [selectedTab, debouncedSearch]);
 
     const filteredEvents = useMemo(() => {
+        const list = allEvents?.data ?? [];
         const term = normalize(debouncedSearch);
+
         return list.filter(
             (ev) => matchesTab(ev, selectedTab) && matchesSearch(ev, term)
         );
-    }, [list, selectedTab, debouncedSearch]);
+    }, [allEvents?.data, selectedTab, debouncedSearch]);
+
+    const handleNextPage = () => {
+        if (allEvents.hasNextPage) {
+            setPage(allEvents.pageForward);
+            setDirection("next");
+        }
+    };
+
+    const handlePreviousPage = () => {
+        if (allEvents.hasPreviousPage) {
+            setPage(allEvents.pageBack);
+            setDirection("previous");
+        }
+    };
 
     return (
         <div>
@@ -81,11 +100,11 @@ export default function MyEventsPage() {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         type="text"
-                        placeholder="Search My Events"
+                        placeholder="Search Events"
                         className="
-              w-full p-3 rounded-2xl
-              bg-gray-100 text-gray-700 placeholder-gray-400
-              focus:outline-none focus:ring-2 focus:ring-primary
+                w-full p-3 rounded-2xl
+                bg-gray-100 text-gray-700 placeholder-gray-400
+                focus:outline-none focus:ring-2 focus:ring-primary
             "
                     />
                 </div>
@@ -118,8 +137,8 @@ export default function MyEventsPage() {
             </div>
 
             {/* Results */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-4">
-                {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                {gettingAllEvents ? (
                     Array.from({ length: 4 }).map((_, idx) => (
                         <UpcomingEventSkeleton key={idx} />
                     ))
@@ -135,13 +154,40 @@ export default function MyEventsPage() {
                 ) : (
                     filteredEvents.map((event) => (
                         <UpcomingEventCard
-                            key={event.id}
                             event={event}
-                            link={`/dashboard/${event.eventId}/${event.eventClass}`}
+                            key={event.id}
+                            link="/events-details"
                         />
                     ))
                 )}
             </div>
+
+            {/* Pagination */}
+            {(allEvents?.data?.length ?? 0) > 0 && (
+                <div className="flex justify-between mt-6 pb-4">
+                    <button
+                        className="text-sm text-primary hover:bg-gray-100 py-2 px-6 rounded-xl
+                       focus:outline-none focus:ring-2 focus:ring-primary/50
+                       disabled:opacity-50 disabled:cursor-not-allowed border border-primary/20"
+                        onClick={handlePreviousPage}
+                        disabled={!allEvents.hasPreviousPage}
+                    >
+                        Previous
+                    </button>
+
+                    <button
+                        className="text-sm text-white bg-primary hover:bg-primary/80 py-2 px-6 rounded-xl
+                       focus:outline-none focus:ring-2 focus:ring-primary/50
+                       disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleNextPage}
+                        disabled={!allEvents.hasNextPage}
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
+
+export default PostedEventsPage;

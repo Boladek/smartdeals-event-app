@@ -114,7 +114,7 @@ export const eventApi = {
 
     // Events list
     getEvent(params) {
-        return customAxios.get("/getEvent", { params });
+        return customAxios.get("/event/getEvent", { params });
     },
 
     getAgentEvents(params) {
@@ -135,6 +135,10 @@ export const eventApi = {
 
     getUserAllEvents(params) {
         return customAxios.get("/event/getUserAllEvents_web", { params });
+    },
+
+    getUserAllEventsFilter(params) {
+        return customAxios.get("/event/filterEvents", { params });
     },
 
     // Attendees
@@ -161,6 +165,10 @@ export const eventApi = {
     // Event tickets (customer)
     getEventTickets(params) {
         return customAxios.get("/event/getEventTickets", { params });
+    },
+
+    getAllMyEvent(params) {
+        return customAxios.get("/customer/getMyEvents", { params });
     },
 
     getEventTicket(params) {

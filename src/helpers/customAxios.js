@@ -40,6 +40,10 @@ customAxios.interceptors.request.use(
 
         // Add query parameters
         if (config.method?.toLowerCase() === "get") {
+            console.log({
+                ...extraParams,
+                ...(config.params || {}),
+            });
             config.params = {
                 payload: encryption({
                     ...extraParams,
@@ -83,7 +87,7 @@ customAxios.interceptors.response.use(
             //     window.location.href = "/admin-login";
             // } else {
             // }
-            window.location.href = "/dashboard";
+            // window.location.href = "/dashboard";
         }
         let reponseData;
         try {
@@ -100,7 +104,7 @@ customAxios.interceptors.response.use(
 
         if (error?.status === 403 || error?.status === 401) {
             storage.clearStorage();
-            window.location.href = "/dashboard";
+            // window.location.href = "/dashboard";
 
             // toast.error("Unauthorized");
             return Promise.reject(error);

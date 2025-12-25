@@ -2,17 +2,16 @@ import { UseAuth } from "../contexts/AuthContext";
 import { LoginForm } from "./LoginForm";
 import { useLocation, useNavigate } from "react-router";
 import {
-    FaCalendarAlt, // All Events
-    FaClipboardList, // My Events
-    FaPlusCircle, // Create Event
+    FaCalendarAlt,
+    FaClipboardList,
+    FaPlusCircle,
     FaSignOutAlt,
+    FaShoppingBag,
 } from "react-icons/fa";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import logo from "../assets/smartdeals.svg";
+import { SideBar } from "./SideBar";
 
-/**
- * 🔗 Central nav config (single source of truth)
- */
 const NAV_LINKS = [
     {
         label: "All Events",
@@ -27,12 +26,34 @@ const NAV_LINKS = [
         icon: FaClipboardList,
     },
     {
+        path: "/posted-events",
+        label: "Posted Events",
+        shortLabel: "Posted",
+        icon: FaShoppingBag,
+    },
+    {
         label: "Create Event",
         shortLabel: "Create",
         path: "/create-event",
         icon: FaPlusCircle,
     },
 ];
+
+const MAIN_NAV_LINKS = [
+    {
+        label: "All Events",
+        shortLabel: "Events",
+        path: "/dashboard",
+        icon: FaCalendarAlt,
+    },
+    {
+        label: "My Events",
+        shortLabel: "My Events",
+        path: "/my-events",
+        icon: FaClipboardList,
+    },
+];
+
 export const Layout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -48,11 +69,11 @@ export const Layout = ({ children }) => {
 
     const isActive = (path) => location.pathname === path;
 
-    const desktopLinkClass = (active) =>
-        [
-            "flex items-center gap-2 text-sm font-semibold transition-colors",
-            active ? "text-primary" : "text-gray-700 hover:text-primary",
-        ].join(" ");
+    // ✅ Choose links based on accountType
+    const links = useMemo(() => {
+        const isEventUser = isLoggedIn && user?.accountType === "event";
+        return isEventUser ? NAV_LINKS : MAIN_NAV_LINKS;
+    }, [isLoggedIn, user?.accountType]);
 
     const mobileLinkClass = (active) =>
         [
@@ -61,10 +82,8 @@ export const Layout = ({ children }) => {
         ].join(" ");
 
     useEffect(() => {
-        if (location.pathname === "/") {
-            navigate("/dashboard");
-        }
-    }, [location]);
+        if (location.pathname === "/") navigate("/dashboard");
+    }, [location.pathname, navigate]);
 
     return (
         <div className="h-screen flex flex-col">
@@ -72,28 +91,12 @@ export const Layout = ({ children }) => {
             <header className="w-full px-4 md:px-6 py-3 flex justify-between items-center border-b border-[#00000012] bg-white sticky top-0 z-40">
                 <img
                     src={logo}
-                    className="h-8"
+                    className="h-8 cursor-pointer"
                     alt="Smart Deals logo"
                     onClick={() => navigate("/dashboard")}
                 />
 
-                {/* Desktop Navigation */}
-                {isLoggedIn && user.accountType === "event" && (
-                    <nav className="hidden md:flex items-center gap-6">
-                        {NAV_LINKS.map(({ label, path, icon: Icon }) => (
-                            <button
-                                key={path}
-                                onClick={() => navigate(path)}
-                                className={desktopLinkClass(isActive(path))}
-                            >
-                                <Icon />
-                                {label}
-                            </button>
-                        ))}
-                    </nav>
-                )}
-
-                {/* Right actions (visible on mobile & desktop) */}
+                {/* Right actions */}
                 <div className="flex gap-3 items-center">
                     {!isLoggedIn ? (
                         <button
@@ -117,6 +120,7 @@ export const Layout = ({ children }) => {
                             <button
                                 onClick={logout}
                                 className="flex items-center gap-1 text-primary hover:text-primary/70 text-sm font-medium"
+                                type="button"
                             >
                                 <FaSignOutAlt />
                                 <span className="hidden sm:inline">Logout</span>
@@ -127,17 +131,42 @@ export const Layout = ({ children }) => {
             </header>
 
             {/* ================= MAIN CONTENT ================= */}
-            <main className="flex-1 overflow-auto px-4 md:px-0 pb-20 md:pb-6">
-                <div className="max-w-4xl mx-auto">{children}</div>
-            </main>
+            <div className="flex-1 w-full">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+                    <div
+                        className={`grid grid-cols-1 ${
+                            isLoggedIn
+                                ? "md:grid-cols-[260px_1fr]"
+                                : "md:grid-cols-1"
+                        }  gap-6`}
+                    >
+                        {/* Sidebar (desktop) */}
+                        {isLoggedIn && (
+                            <aside className="hidden md:block">
+                                <div className="sticky top-24">
+                                    <SideBar links={links} />
+                                </div>
+                            </aside>
+                        )}
+
+                        {/* Content */}
+                        <main className="min-w-0">{children}</main>
+                    </div>
+                </div>
+            </div>
 
             {/* ================= MOBILE BOTTOM NAV ================= */}
-            {isLoggedIn && user.accountType === "event" && (
+            {isLoggedIn && (
                 <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-[#00000012] z-50">
-                    <div className="grid grid-cols-2 py-2 ">
-                        {NAV_LINKS.map(({ shortLabel, path, icon: Icon }) => (
+                    <div
+                        className={`grid py-2 ${
+                            links.length <= 2 ? "grid-cols-2" : "grid-cols-4"
+                        }`}
+                    >
+                        {links.map(({ shortLabel, path, icon: Icon }) => (
                             <button
                                 key={path}
+                                type="button"
                                 onClick={() => navigate(path)}
                                 className={mobileLinkClass(isActive(path))}
                             >

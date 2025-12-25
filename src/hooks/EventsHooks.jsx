@@ -10,7 +10,7 @@ import { configKeys } from "../helpers/config";
 export const useEvent = (eventId) => {
     return useQuery({
         queryKey: ["event", eventId],
-        queryFn: () => eventApi.fetchEventById(eventId),
+        queryFn: () => eventApi.getEvent({ eventId }),
         enabled: !!eventId,
     });
 };
@@ -19,6 +19,36 @@ export const useGetAllEvents = ({ page = 0, direction = "asc" }) => {
     return useQuery({
         queryKey: ["all-event", page, direction], // Query key is an array
         queryFn: () => eventApi.getUserAllEvents({ page, direction }), // The function to fetch data
+        staleTime: Infinity,
+        retry: 2,
+        select: (data) => {
+            // Adjust the response data structure as needed
+            return {
+                data: data.data, // list of events
+                hasNextPage: data.hasNextPage, // Pagination info
+                hasPreviousPage: data.hasPreviousPage,
+                pageBack: data.page_back,
+                pageForward: data.page_forward,
+            };
+        },
+    });
+};
+
+export const useGetFilteredEvents = ({
+    page = 0,
+    direction = "asc",
+    action,
+    ...rest
+}) => {
+    return useQuery({
+        queryKey: ["filtered-events", page, direction, action, rest], // Query key is an array
+        queryFn: () =>
+            eventApi.getUserAllEventsFilter({
+                page,
+                direction,
+                action,
+                ...rest,
+            }), // The function to fetch data
         staleTime: Infinity,
         retry: 2,
         select: (data) => {
@@ -118,12 +148,11 @@ export function useGetStates(params) {
 
 export const useGetEventType = (param) => {
     return useQuery({
-        queryKey: ["event-type"],
+        queryKey: ["event-types"],
         queryFn: () => eventApi.getEventType(),
         staleTime: Infinity,
         select: (data) => data.data,
         retry: 2,
-        // enabled: !!param.eventId,
     });
 };
 
@@ -236,10 +265,7 @@ export const useVerifyPayWithSmartDeals = () => {
 export const useEventPaymentDetails = () => {
     return useMutation({
         mutationFn: (body) =>
-            customAxios.post(
-                "/event/getEventPaymentTransactionDetails",
-                body
-            ),
+            customAxios.post("/event/getEventPaymentTransactionDetails", body),
     });
 };
 

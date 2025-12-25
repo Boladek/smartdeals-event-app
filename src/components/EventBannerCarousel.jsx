@@ -58,7 +58,7 @@ export default function EventBannerCarousel({
 
     return (
         <div
-            className="relative w-full h-[240px] sm:h-[320px] rounded-2xl border overflow-hidden bg-gray-100"
+            className="relative w-full h-[240px] sm:h-[320px] rounded-2xl overflow-hidden"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
         >
@@ -70,7 +70,7 @@ export default function EventBannerCarousel({
                 {slides.map((src, idx) => (
                     <div
                         key={`${src}-${idx}`}
-                        className="w-full h-full shrink-0 flex items-center justify-center bg-gray-100"
+                        className="w-full h-full shrink-0 flex items-center justify-center"
                     >
                         <img
                             src={src}

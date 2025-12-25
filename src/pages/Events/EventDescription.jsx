@@ -1,14 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
     FaHeart,
     FaShareAlt,
     FaCalendarAlt,
-    FaMapMarkerAlt,
     FaMinus,
     FaPlus,
     FaTicketAlt,
     FaChevronRight,
+    FaFacebook,
+    FaTwitter,
+    FaInstagram,
+    FaSnapchatGhost,
+    FaTiktok,
+    FaMapMarkerAlt,
 } from "react-icons/fa";
+import { MdContentCopy } from "react-icons/md";
 import { BackButton } from "../../components/BackButton";
 import { useLocation, useNavigate } from "react-router";
 import { GuestForm } from "./GuestForm";
@@ -29,12 +35,31 @@ import { Overlay } from "../../components/Overlay";
 import EventBannerCarousel from "../../components/EventBannerCarousel";
 import { SuccessPage } from "../CreateEvent/SuccessPage";
 import { Modal } from "../../components/Modal";
+import { ShareHook } from "../../hooks/ShareHook";
 
-const EventDescription = () => {
+// ✅ Helper: basic URL validation
+const isValidUrl = (url) => {
+    if (!url) return false;
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+// (you referenced this in your code; keeping it here so copy/paste works)
+const cleanHandle = (handle) =>
+    String(handle || "")
+        .replace(/^@+/, "")
+        .trim();
+
+const EventDescription = ({ event }) => {
     const location = useLocation();
     const navigate = useNavigate();
-    const event = location.state?.event || {};
+    // const event = location.state?.event || {};
     const { isLoggedIn } = UseAuth();
+    const { share } = ShareHook();
 
     const { data: tickets = [], isLoading: loading } = useGetEventTickets({
         eventId: event.eventId,
@@ -82,6 +107,59 @@ const EventDescription = () => {
 
     const organizerName =
         event.partnerName || event.username || "Event Organizer";
+
+    // ✅ Share URL: current url + ?eventId=...
+    const shareUrl = useMemo(() => {
+        const base =
+            typeof window !== "undefined"
+                ? window.location.href.split("#")[0]
+                : "";
+        return base;
+    }, [event?.eventId]);
+
+    const shareText = useMemo(() => {
+        const name = event?.eventName || "Event";
+        const venue = event?.venue ? ` @ ${event.venue}` : "";
+        return `You're invited: ${name}${venue}`;
+    }, [event?.eventName, event?.venue]);
+
+    // ✅ Maps URL (only meaningful for physical events)
+    const mapsUrl = useMemo(() => {
+        // Prefer address; fallback to coordinates
+        const query = event?.address?.trim()
+            ? event.address
+            : event?.latitude && event?.longitude
+            ? `${event.latitude},${event.longitude}`
+            : "";
+
+        return query
+            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  query
+              )}`
+            : null;
+    }, [event?.address, event?.latitude, event?.longitude]);
+
+    const openShare = (url) => {
+        if (typeof window === "undefined") return;
+        window.open(url, "_blank", "noopener,noreferrer");
+    };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            alert("Invite link copied!");
+        } catch {
+            alert("Could not copy link. Please copy manually.");
+        }
+    };
+
+    const onClickShareInvite = () => {
+        share({
+            url: shareUrl,
+            text: shareText,
+            title: "Smart Deals Event",
+        });
+    };
 
     // 🚨 Enforce ticket selection
     const requireTicketSelection = () => {
@@ -157,6 +235,8 @@ const EventDescription = () => {
         }
     }, [selectedTicket]);
 
+    console.log({ event });
+
     return (
         <div className="space-y-6 pb-4">
             {(isPending || buyingTicket) && <Overlay />}
@@ -169,9 +249,9 @@ const EventDescription = () => {
                 interval={4500}
             />
 
-            {/* Title */}
-            <div className="flex justify-between items-start gap-4">
-                <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
+                {/* Title & slogan */}
+                <div className="order-1 sm:order-none">
                     <h2 className="text-lg font-semibold uppercase">
                         {event.eventName}
                     </h2>
@@ -180,50 +260,261 @@ const EventDescription = () => {
                     </p>
                 </div>
 
-                <button className="text-red-600 flex items-center gap-2 text-sm">
-                    <FaShareAlt /> Share Invite
-                </button>
+                {/* Share + icons (below title on mobile) */}
+                <div className="order-2 sm:order-none">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onClickShareInvite}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/15 transition"
+                            title="Copy invite link"
+                        >
+                            <FaShareAlt className="text-primary" />
+                            <span>Share Invite</span>
+                        </button>
+
+                        {/* Icons row (scrollable on mobile) */}
+                        <div className="w-full sm:w-auto overflow-x-auto">
+                            <div className="flex items-center gap-2 min-w-max pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopyLink();
+                                    }}
+                                    className="h-10 w-10 shrink-0 rounded-full border border-primary/20 bg-white text-primary flex items-center justify-center hover:bg-primary/10 transition"
+                                    title="Copy link"
+                                >
+                                    <MdContentCopy
+                                        size={16}
+                                        className="text-primary"
+                                    />
+                                </button>
+
+                                {/* ✅ Google Maps (only if physical event + address/coords exist) */}
+                                {!event?.isVirtual && mapsUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openShare(mapsUrl);
+                                        }}
+                                        className="h-10 w-10 shrink-0 rounded-full border border-primary/20 bg-white text-primary flex items-center justify-center hover:bg-primary/10 transition"
+                                        title="Open location in Google Maps"
+                                    >
+                                        <FaMapMarkerAlt
+                                            size={16}
+                                            className="text-primary"
+                                        />
+                                    </button>
+                                )}
+
+                                {/* Instagram (only if igHandle exists) */}
+                                {event?.igHandle && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openShare(
+                                                `https://instagram.com/${cleanHandle(
+                                                    event.igHandle
+                                                )}`
+                                            );
+                                        }}
+                                        className="h-10 w-10 shrink-0 rounded-full border border-primary/20 bg-white text-primary flex items-center justify-center hover:bg-primary/10 transition"
+                                        title={`Instagram: ${event.igHandle}`}
+                                    >
+                                        <FaInstagram
+                                            size={16}
+                                            className="text-primary"
+                                        />
+                                    </button>
+                                )}
+
+                                {/* Facebook share (only if facebookHandle exists) */}
+                                {event?.facebookHandle && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openShare(
+                                                `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                                                    shareUrl
+                                                )}`
+                                            );
+                                        }}
+                                        className="h-10 w-10 shrink-0 rounded-full border border-primary/20 bg-white text-primary flex items-center justify-center hover:bg-primary/10 transition"
+                                        title="Share on Facebook"
+                                    >
+                                        <FaFacebook
+                                            size={16}
+                                            className="text-primary"
+                                        />
+                                    </button>
+                                )}
+
+                                {/* X/Twitter share (only if twitterHandle exists) */}
+                                {event?.twitterHandle && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openShare(
+                                                `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                                                    shareText
+                                                )}&url=${encodeURIComponent(
+                                                    shareUrl
+                                                )}`
+                                            );
+                                        }}
+                                        className="h-10 w-10 shrink-0 rounded-full border border-primary/20 bg-white text-primary flex items-center justify-center hover:bg-primary/10 transition"
+                                        title="Share on X"
+                                    >
+                                        <FaTwitter
+                                            size={16}
+                                            className="text-primary"
+                                        />
+                                    </button>
+                                )}
+
+                                {/* Snapchat (only if snapchat exists) */}
+                                {event?.snapchat && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openShare(
+                                                `https://www.snapchat.com/add/${cleanHandle(
+                                                    event.snapchat
+                                                )}`
+                                            );
+                                        }}
+                                        className="h-10 w-10 shrink-0 rounded-full border border-primary/20 bg-white text-primary flex items-center justify-center hover:bg-primary/10 transition"
+                                        title={`Snapchat: ${event.snapchat}`}
+                                    >
+                                        <FaSnapchatGhost
+                                            size={16}
+                                            className="text-primary"
+                                        />
+                                    </button>
+                                )}
+
+                                {/* TikTok (only if tiktok exists) */}
+                                {event?.tiktok && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openShare(
+                                                `https://www.tiktok.com/@${cleanHandle(
+                                                    event.tiktok
+                                                )}`
+                                            );
+                                        }}
+                                        className="h-10 w-10 shrink-0 rounded-full border border-primary/20 bg-white text-primary flex items-center justify-center hover:bg-primary/10 transition"
+                                        title={`TikTok: ${event.tiktok}`}
+                                    >
+                                        <FaTiktok
+                                            size={16}
+                                            className="text-primary"
+                                        />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Meta */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 border rounded-lg flex gap-2">
+                <div className="p-4 border rounded-lg flex gap-2 items-center">
                     <FaCalendarAlt className="text-red-600" />
                     <div>
-                        <p className="font-semibold">{formattedDate}</p>
+                        {event.perpetual ? (
+                            <p className="font-semibold">
+                                Every {event.eventDate}
+                            </p>
+                        ) : (
+                            <p className="font-semibold">{formattedDate}</p>
+                        )}
+
                         <p className="text-xs text-gray-600">{formattedTime}</p>
                     </div>
                 </div>
 
-                <div className="p-4 border rounded-lg flex gap-2">
+                {/* ✅ Updated Address/Meeting link card */}
+                <div className="p-4 border rounded-lg flex gap-2 items-center">
                     <FaMapMarkerAlt className="text-red-600" />
-                    <div>
-                        <p className="font-semibold uppercase">{event.venue}</p>
-                        <p className="text-xs text-gray-600">{event.address}</p>
+                    <div className="min-w-0">
+                        {event?.isVirtual ? (
+                            <>
+                                <p className="font-semibold uppercase">
+                                    Online event
+                                </p>
+
+                                {event?.meetingLink &&
+                                isValidUrl(event.meetingLink) ? (
+                                    <a
+                                        href={event.meetingLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-primary underline break-all"
+                                    >
+                                        {event.meetingLink}
+                                    </a>
+                                ) : (
+                                    <p className="text-xs text-gray-600">
+                                        Meeting link will be shared with
+                                        attendees.
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <p className="font-semibold uppercase">
+                                    {event?.venue || "Venue TBC"}
+                                </p>
+
+                                <p className="text-xs text-gray-600">
+                                    {event?.address || "Address not provided"}
+                                </p>
+                            </>
+                        )}
                     </div>
                 </div>
 
-                <div className="p-4 bg-[#FBD5D733] rounded-lg flex justify-between items-center">
-                    <FaTicketAlt className="text-red-600" />
-                    <span className="font-semibold">
-                        {isPaid ? "PAID EVENT" : "FREE EVENT"}
-                    </span>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={decreaseAttendees}
-                            className="p-2 bg-red-100 text-red-600 rounded"
-                        >
-                            <FaMinus />
-                        </button>
-                        <span>{attendees}</span>
-                        <button
-                            onClick={increaseAttendees}
-                            className="p-2 bg-red-100 text-red-600 rounded"
-                        >
-                            <FaPlus />
-                        </button>
+                <div
+                    className={`p-4 bg-[#FBD5D733] rounded-lg flex items-center ${
+                        isPaid ? "justify-between" : ""
+                    }`}
+                >
+                    <div className="flex gap-2 items-center">
+                        <FaTicketAlt className="text-red-600" />
+                        <span className="font-semibold">
+                            {isPaid ? "PAID EVENT" : "FREE EVENT"}
+                        </span>
                     </div>
+
+                    {isPaid && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={decreaseAttendees}
+                                className="p-2 bg-red-100 text-red-600 rounded"
+                            >
+                                <FaMinus />
+                            </button>
+                            <span>{attendees}</span>
+                            <button
+                                type="button"
+                                onClick={increaseAttendees}
+                                className="p-2 bg-red-100 text-red-600 rounded"
+                            >
+                                <FaPlus />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* 🎯 Ticket selector */}
@@ -250,27 +541,25 @@ const EventDescription = () => {
                     )}
                 </div>
                 <div />
+
                 {selectedTicket && guests.length > 0 && (
                     <div
                         className="flex items-center justify-between p-4 bg-white rounded-lg col-span-1 border border-gray-200 cursor-pointer"
                         onClick={() => setOpen(true)}
                     >
-                        {" "}
                         <div className="text-[14px] font-semibold text-gray-800 flex gap-4 items-center">
-                            {" "}
-                            Guest List{" "}
+                            Guest List
                             <span className="bg-red-600 text-white rounded-full px-3 py-1 text-sm flex justify-center items-center">
-                                {" "}
-                                {attendees}{" "}
-                            </span>{" "}
-                        </div>{" "}
+                                {attendees}
+                            </span>
+                        </div>
                         <button
+                            type="button"
                             onClick={() => null}
                             className="text-red-600 hover:text-red-800"
                         >
-                            {" "}
-                            <FaChevronRight size={12} />{" "}
-                        </button>{" "}
+                            <FaChevronRight size={12} />
+                        </button>
                     </div>
                 )}
             </div>
@@ -289,25 +578,34 @@ const EventDescription = () => {
             {/* Actions */}
             <div className="flex justify-end gap-4">
                 {isLoggedIn && (
-                    <button className="text-red-600 flex items-center gap-2 text-sm">
+                    <button
+                        type="button"
+                        className="text-red-600 flex items-center gap-2 text-sm"
+                    >
                         <FaHeart /> Add to favorite
                     </button>
                 )}
 
-                {guests.length === 0 ? (
-                    <button
-                        className="px-6 py-2 bg-red-600 text-white rounded-full"
-                        onClick={onClickRSVP}
-                    >
-                        RSVP
-                    </button>
-                ) : (
-                    <button
-                        className="px-6 py-2 bg-red-600 text-white rounded-full"
-                        onClick={handleAction}
-                    >
-                        Proceed
-                    </button>
+                {isPaid && (
+                    <>
+                        {guests.length === 0 ? (
+                            <button
+                                type="button"
+                                className="px-6 py-2 bg-red-600 text-white rounded-full"
+                                onClick={onClickRSVP}
+                            >
+                                RSVP
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className="px-6 py-2 bg-red-600 text-white rounded-full"
+                                onClick={handleAction}
+                            >
+                                Proceed
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
 

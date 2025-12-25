@@ -4,11 +4,13 @@ import { Layout } from "../components/Layout";
 import EventsCategoryPage from "../pages/Events/EventsCategoryPage";
 import EventDescription from "../pages/Events/EventDescription";
 import CreateEventPage from "../pages/CreateEvent";
-import MyEventsPage from "../pages/MyEvents";
-import EventDetails from "../pages/MyEvents/EventDetails";
+import PostedEvents from "../pages/PostedEvents";
+import EventDetails from "../pages/PostedEvents/EventDetails";
 import EditEvent from "../pages/EditEvent";
 
 import PrivateRoutes from "./PrivateRoutes";
+import EventInformation from "../pages/Events/EventInformation";
+import MyEventsPage from "../pages/MyEvents";
 
 const router = createBrowserRouter([
     {
@@ -26,6 +28,7 @@ const router = createBrowserRouter([
                 children: [
                     { index: true, element: <EventsCategoryPage /> },
                     { path: "details", element: <EventDescription /> },
+                    { path: ":id/:class", element: <EventInformation /> },
                 ],
             },
 
@@ -34,6 +37,7 @@ const router = createBrowserRouter([
                 element: <PrivateRoutes />,
                 children: [
                     { path: "create-event", element: <CreateEventPage /> },
+                    { path: "posted-events", element: <PostedEvents /> },
                     { path: "my-events", element: <MyEventsPage /> },
                     { path: "edit-event", element: <EditEvent /> },
                     { path: "events-details", element: <EventDetails /> },

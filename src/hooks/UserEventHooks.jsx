@@ -13,12 +13,15 @@ import customAxios from "../helpers/customAxios";
 export const useGetEvent = (param) => {
     return useQuery({
         queryKey: ["event-details", param.eventId, param.eventClass],
-        queryFn: () => eventApi.getUserEvent(param),
+        queryFn: async () => {
+            const res = await eventApi.getUserEvent(param);
+            return res.data?.[0];
+        },
         enabled: !!param.eventId && !!param.eventClass,
     });
 };
 
-export const useGetMyEvents = ({ page = 0, direction = "asc" }) => {
+export const AlluseGetMyEvents = ({ page = 0, direction = "asc" }) => {
     return useQuery({
         queryKey: ["my-events", page, direction], // Query key is an array
         queryFn: () => eventApi.getAllEvents(), // The function to fetch data
@@ -200,6 +203,17 @@ export const useGetEventPaymentDetails = (params) => {
                 "/event/getEventPaymentTransactionDetails_guest",
                 params
             ),
+        staleTime: Infinity,
+        select: (data) => data.data,
+        retry: 2,
+        // enabled: !!param.eventId,
+    });
+};
+
+export const useGetAllMyEvents = (params) => {
+    return useQuery({
+        queryKey: ["event-details"],
+        queryFn: () => eventApi.getAllMyEvent(),
         staleTime: Infinity,
         select: (data) => data.data,
         retry: 2,

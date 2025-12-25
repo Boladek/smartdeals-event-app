@@ -39,7 +39,7 @@ const EventsCategoryPage = () => {
     const [activeCategory, setActiveCategory] = useState("All");
     const { data: eventCategories = [], isLoading } =
         useGetEventByCategory(category);
-
+    console.log(eventCategories);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [activeFilter, setActiveFilter] = useState(null);
 
@@ -60,10 +60,10 @@ const EventsCategoryPage = () => {
     );
 
     return (
-        <div className="h-full space-y-8">
+        <div className="h-full space-y-8 pt-4">
             {/* Search Bar */}
-            <div className="flex justify-between gap-8">
-                {/* <div className="flex items-center space-x-4 overflow-x-auto pb-3">
+            {/* <div className="flex justify-between gap-8"></div> */}
+            {/* <div className="flex items-center space-x-4 overflow-x-auto pb-3">
                     {isLoading ? (
                         // 🔹 Skeleton loader for category pills
                         <>
@@ -90,8 +90,7 @@ const EventsCategoryPage = () => {
                         ))
                     )}
                 </div> */}
-                <div className="flex items-center gap-3">
-                    {/* Filter button */}
+            {/* <div className="flex items-center gap-3">
                     <div className="relative">
                         <button
                             type="button"
@@ -126,7 +125,6 @@ const EventsCategoryPage = () => {
                         )}
                     </div>
 
-                    {/* Search input */}
                     <div className="relative w-full max-w-[200px] border-b">
                         <input
                             type="text"
@@ -135,8 +133,7 @@ const EventsCategoryPage = () => {
                         />
                         <FaSearch className="absolute left-3 top-4 transform -translate-y-1/2 text-gray-400" />
                     </div>
-                </div>
-            </div>
+                </div> */}
 
             {/* Event Sections */}
             {/* <div className="space-y-8">
@@ -176,9 +173,9 @@ const EventsCategoryPage = () => {
 
                 
             </div> */}
-            <div>
-                <UpcomingEvents />
-            </div>
+            {/* <div>
+            </div> */}
+            <UpcomingEvents />
         </div>
     );
 };

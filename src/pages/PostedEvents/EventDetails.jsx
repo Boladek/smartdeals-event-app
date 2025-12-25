@@ -11,8 +11,10 @@ import { useLocation, useNavigate } from "react-router";
 import { formatEventDate, formatEventTime } from "../../helpers/functions";
 import TicketDetails from "./TicketDetails";
 import EventBannerCarousel from "../../components/EventBannerCarousel";
+import { UseAuth } from "../../contexts/AuthContext";
 
 const EventDetails = () => {
+    const { user } = UseAuth();
     const location = useLocation();
     const event = location.state?.event || {};
     const navigate = useNavigate();
@@ -32,6 +34,8 @@ const EventDetails = () => {
     const goToEditEvent = () => {
         navigate("/edit-event", { state: { event } });
     };
+
+    const isOwner = event.emailAddress === user.emailAddress;
 
     return (
         <div className="space-y-6 pb-4">
@@ -83,14 +87,16 @@ const EventDetails = () => {
 
                 {/* Right buttons */}
                 <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                        onClick={goToEditEvent}
-                        className="text-gray-700 border border-gray-200 bg-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold hover:bg-gray-50"
-                        title="Edit Event"
-                    >
-                        <FaEdit size={16} />
-                        Edit Event
-                    </button>
+                    {isOwner && (
+                        <button
+                            onClick={goToEditEvent}
+                            className="text-gray-700 border border-gray-200 bg-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold hover:bg-gray-50"
+                            title="Edit Event"
+                        >
+                            <FaEdit size={16} />
+                            Edit Event
+                        </button>
+                    )}
 
                     <button
                         className="text-red-600 border border-red-200 bg-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold hover:bg-red-50"
@@ -149,7 +155,7 @@ const EventDetails = () => {
                 </div>
 
                 <div />
-                <TicketDetails />
+                {isOwner && <TicketDetails />}
                 <div />
                 <div />
             </div>
