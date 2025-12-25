@@ -235,8 +235,6 @@ const EventDescription = ({ event }) => {
         }
     }, [selectedTicket]);
 
-    console.log({ event });
-
     return (
         <div className="space-y-6 pb-4">
             {(isPending || buyingTicket) && <Overlay />}

@@ -39,7 +39,6 @@ const EventsCategoryPage = () => {
     const [activeCategory, setActiveCategory] = useState("All");
     const { data: eventCategories = [], isLoading } =
         useGetEventByCategory(category);
-    console.log(eventCategories);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [activeFilter, setActiveFilter] = useState(null);
 
@@ -51,7 +50,7 @@ const EventsCategoryPage = () => {
         setActiveFilter(option);
         setIsFilterOpen(false);
         // TODO: plug your actual filter logic here
-        console.log("Selected filter:", option.action);
+        // console.log("Selected filter:", option.action);
     };
 
     const allEventCategories = useMemo(

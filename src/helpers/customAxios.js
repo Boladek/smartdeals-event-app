@@ -40,10 +40,6 @@ customAxios.interceptors.request.use(
 
         // Add query parameters
         if (config.method?.toLowerCase() === "get") {
-            console.log({
-                ...extraParams,
-                ...(config.params || {}),
-            });
             config.params = {
                 payload: encryption({
                     ...extraParams,

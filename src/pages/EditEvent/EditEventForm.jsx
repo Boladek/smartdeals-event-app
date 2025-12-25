@@ -337,7 +337,7 @@ export const EditEventForm = ({ event }) => {
             // alert(res?.message || "Event updated successfully");
             // handleClose?.();
 
-            console.log("EDIT EVENT PAYLOAD:", payload);
+            // console.log("EDIT EVENT PAYLOAD:", payload);
             alert(res.message);
             navigate("/my-events");
         } catch (e) {

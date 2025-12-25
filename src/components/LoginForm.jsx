@@ -24,8 +24,6 @@ export const LoginForm = ({ handleClose, handleLogin }) => {
 
     const onSubmit = async (data) => {
         try {
-            console.log("Submitted Data: ", data);
-
             const res = await mutateAsync({
                 username: data.username,
                 password: hashPassword({
